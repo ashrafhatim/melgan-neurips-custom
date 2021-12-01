@@ -1,0 +1,10 @@
+wavs/ARA NORM  0002.wav
+wavs/ARA NORM  0003.wav
+wavs/ARA NORM  0004.wav
+wavs/ARA NORM  0005.wav
+wavs/ARA NORM  0006.wav
+wavs/ARA NORM  0007.wav
+wavs/ARA NORM  0008.wav
+wavs/ARA NORM  0009.wav
+wavs/ARA NORM  0010.wav
+wavs/ARA NORM  0011.wav
