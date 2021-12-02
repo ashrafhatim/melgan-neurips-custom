@@ -68,8 +68,8 @@ def main():
     ).cuda()
     fft = Audio2Mel(n_mel_channels=args.n_mel_channels).cuda()
 
-    print(netG)
-    print(netD)
+    # print(netG)
+    # print(netD)
 
     #####################
     # Create optimizers #
@@ -77,11 +77,15 @@ def main():
     optG = torch.optim.Adam(netG.parameters(), lr=1e-4, betas=(0.5, 0.9))
     optD = torch.optim.Adam(netD.parameters(), lr=1e-4, betas=(0.5, 0.9))
 
-    if load_root and load_root.exists():
-        netG.load_state_dict(torch.load(load_root / "netG.pt"))
-        optG.load_state_dict(torch.load(load_root / "optG.pt"))
-        netD.load_state_dict(torch.load(load_root / "netD.pt"))
-        optD.load_state_dict(torch.load(load_root / "optD.pt"))
+    # steps = 0
+    # epoch_offset = 0
+    # if load_root and load_root.exists():
+    #     netG.load_state_dict(torch.load(load_root / "netG.pt"))
+    #     optG.load_state_dict(torch.load(load_root / "optG.pt"))
+    #     netD.load_state_dict(torch.load(load_root / "netD.pt"))
+    #     optD.load_state_dict(torch.load(load_root / "optD.pt"))
+    #     steps = torch.load(load_root / "steps.pt") + 1
+    #     epoch_offset = max(0, int(steps / len(train_loader)))
 
     #######################
     # Create data loaders #
@@ -96,8 +100,18 @@ def main():
         augment=False,
     )
 
-    train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=4)
+    train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=2)
     test_loader = DataLoader(test_set, batch_size=1)
+
+    steps = 0
+    epoch_offset = 0
+    if load_root and load_root.exists():
+        netG.load_state_dict(torch.load(load_root / "netG.pt"))
+        optG.load_state_dict(torch.load(load_root / "optG.pt"))
+        netD.load_state_dict(torch.load(load_root / "netD.pt"))
+        optD.load_state_dict(torch.load(load_root / "optD.pt"))
+        steps = torch.load(load_root / "steps.pt") + 1
+        epoch_offset = max(0, int(steps / len(train_loader)))
 
     ##########################
     # Dumping original audio #
@@ -125,8 +139,7 @@ def main():
     torch.backends.cudnn.benchmark = True
 
     best_mel_reconst = 1000000
-    steps = 0
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(epoch_offset + 1, args.epochs + 1):
         for iterno, x_t in enumerate(train_loader):
             x_t = x_t.cuda()
             s_t = fft(x_t).detach()
@@ -204,6 +217,8 @@ def main():
 
                 torch.save(netD.state_dict(), root / "netD.pt")
                 torch.save(optD.state_dict(), root / "optD.pt")
+
+                torch.save(steps, root / "steps.pt")
 
                 if np.asarray(costs).mean(0)[-1] < best_mel_reconst:
                     best_mel_reconst = np.asarray(costs).mean(0)[-1]
