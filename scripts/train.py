@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0,'/content/melgan-neurips-custom')
+sys.path.insert(0,'/home/jupyter/melgan-neurips-custom')
 
 from mel2wav.dataset import AudioDataset
 from mel2wav.modules import Generator, Discriminator, Audio2Mel
