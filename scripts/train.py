@@ -94,15 +94,15 @@ def main():
     train_set = AudioDataset(
         Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050, augment=False, transform=transform
     )
-    test_set = AudioDataset(
-        Path(args.data_path) / "test_files.txt",
+    val_set = AudioDataset(
+        Path(args.data_path) / "val_files.txt",
         22050 * 4,
         sampling_rate=22050,
         augment=False,
     )
 
     train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=2)
-    test_loader = DataLoader(test_set, batch_size=1)
+    val_loader = DataLoader(val_set, batch_size=1)
 
     #############################################
     # Load models & calculate the offset epochs #
@@ -111,11 +111,12 @@ def main():
     steps = 0
     epoch_offset = 0
     if load_root and load_root.exists():
-        netG.load_state_dict(torch.load(load_root / "netG.pt"))
-        optG.load_state_dict(torch.load(load_root / "optG.pt"))
-        netD.load_state_dict(torch.load(load_root / "netD.pt"))
-        optD.load_state_dict(torch.load(load_root / "optD.pt"))
-        steps = torch.load(load_root / "steps.pt") + 1
+        steps = torch.load(load_root / "steps.pt")
+        netG.load_state_dict(torch.load(load_root / "netG_%d.pt" % steps))
+        optG.load_state_dict(torch.load(load_root / "optG_%d.pt" % steps))
+        netD.load_state_dict(torch.load(load_root / "netD_%d.pt" % steps))
+        optD.load_state_dict(torch.load(load_root / "optD_%d.pt" % steps))
+        steps = steps + 1
         epoch_offset = max(0, int(steps / len(train_loader)))
 
     ##########################
@@ -123,7 +124,7 @@ def main():
     ##########################
     test_voc = []
     test_audio = []
-    for i, x_t in enumerate(test_loader):
+    for i, x_t in enumerate(val_loader):
         x_t = x_t.cuda()
         s_t = fft(x_t).detach()
 
@@ -143,7 +144,7 @@ def main():
     # enable cudnn autotuner to speed up training
     torch.backends.cudnn.benchmark = True
 
-    best_mel_reconst = 1000000
+    best_mel_reconst = 1000000000
     for epoch in range(epoch_offset + 1, args.epochs + 1):
         for iterno, x_t in enumerate(train_loader):
             x_t = x_t.cuda()
@@ -217,16 +218,20 @@ def main():
                             sample_rate=22050,
                         )
 
-                torch.save(netG.state_dict(), root / "netG.pt")
-                torch.save(optG.state_dict(), root / "optG.pt")
+                torch.save(netG.state_dict(), root / "netG_%d.pt" % steps)
+                torch.save(optG.state_dict(), root / "optG_%d.pt" % steps)
 
-                torch.save(netD.state_dict(), root / "netD.pt")
-                torch.save(optD.state_dict(), root / "optD.pt")
+                torch.save(netD.state_dict(), root / "netD_%d.pt" % steps)
+                torch.save(optD.state_dict(), root / "optD_%d.pt" % steps)
 
                 torch.save(steps, root / "steps.pt")
 
-                if np.asarray(costs).mean(0)[-1] < best_mel_reconst:
-                    best_mel_reconst = np.asarray(costs).mean(0)[-1]
+                mel_reconst = mel_rec_val_loss(val_loader, netG, fft)
+                writer.add_scalar("loss/val_mel_reconst", mel_reconst, steps)
+
+                # if np.asarray(costs).mean(0)[-1] < best_mel_reconst:
+                if mel_reconst < best_mel_reconst:
+                    best_mel_reconst = mel_reconst
                     torch.save(netD.state_dict(), root / "best_netD.pt")
                     torch.save(netG.state_dict(), root / "best_netG.pt")
 
