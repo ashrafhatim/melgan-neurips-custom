@@ -27,7 +27,7 @@ class AudioDataset(torch.utils.data.Dataset):
     spectrogram, audio pair.
     """
 
-    def __init__(self, training_files, segment_length, sampling_rate, augment=True):
+    def __init__(self, training_files, segment_length, sampling_rate, augment=True, transform=None):
         self.sampling_rate = sampling_rate
         self.segment_length = segment_length
         self.audio_files = files_to_list(training_files)
@@ -35,6 +35,7 @@ class AudioDataset(torch.utils.data.Dataset):
         random.seed(1234)
         random.shuffle(self.audio_files)
         self.augment = augment
+        self.transform=transform
 
     def __getitem__(self, index):
         # Read audio
@@ -64,7 +65,9 @@ class AudioDataset(torch.utils.data.Dataset):
         data = 0.95 * normalize(data)
 
         if self.augment:
-            amplitude = np.random.uniform(low=0.3, high=1.0)
-            data = data * amplitude
+            # amplitude = np.random.uniform(low=0.3, high=1.0)
+            # data = data * amplitude
+            # new
+            data = self.transform(data)
 
         return torch.from_numpy(data).float(), sampling_rate

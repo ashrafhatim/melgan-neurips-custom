@@ -4,10 +4,14 @@ sys.path.insert(0,'/home/jupyter/melgan-neurips-custom')
 from mel2wav.dataset import AudioDataset
 from mel2wav.modules import Generator, Discriminator, Audio2Mel
 from mel2wav.utils import save_sample
+from mel2wav.custom_transforms import change_speed
 
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+
+import torchvision.transforms as transforms
+
 from torch.utils.tensorboard import SummaryWriter
 
 import yaml
@@ -77,24 +81,21 @@ def main():
     optG = torch.optim.Adam(netG.parameters(), lr=1e-4, betas=(0.5, 0.9))
     optD = torch.optim.Adam(netD.parameters(), lr=1e-4, betas=(0.5, 0.9))
 
-    # steps = 0
-    # epoch_offset = 0
-    # if load_root and load_root.exists():
-    #     netG.load_state_dict(torch.load(load_root / "netG.pt"))
-    #     optG.load_state_dict(torch.load(load_root / "optG.pt"))
-    #     netD.load_state_dict(torch.load(load_root / "netD.pt"))
-    #     optD.load_state_dict(torch.load(load_root / "optD.pt"))
-    #     steps = torch.load(load_root / "steps.pt") + 1
-    #     epoch_offset = max(0, int(steps / len(train_loader)))
-
     #######################
     # Create data loaders #
     #######################
+
+    transform = transforms.RandomChoice(
+    [change_speed([0.99, 0.01], 0.001), 
+     transforms.IdentityTransform()],
+     p=[2,1]
+)
+
     train_set = AudioDataset(
-        Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050
+        Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050, augment=True, transform=transform
     )
     test_set = AudioDataset(
-        Path(args.data_path) / "val_files.txt",
+        Path(args.data_path) / "test_files.txt",
         22050 * 4,
         sampling_rate=22050,
         augment=False,
@@ -102,6 +103,11 @@ def main():
 
     train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=2)
     test_loader = DataLoader(test_set, batch_size=1)
+
+
+    #############################################
+    # Load models & calculate the offset epochs #
+    #############################################
 
     steps = 0
     epoch_offset = 0
