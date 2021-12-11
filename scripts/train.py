@@ -3,7 +3,7 @@ sys.path.insert(0,'/home/jupyter/melgan-neurips-custom')
 
 from mel2wav.dataset import AudioDataset
 from mel2wav.modules import Generator, Discriminator, Audio2Mel
-from mel2wav.utils import save_sample
+from mel2wav.utils import save_sample, mel_rec_val_loss
 from mel2wav.custom_transforms import change_speed
 
 import torch
