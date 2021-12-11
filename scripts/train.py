@@ -86,13 +86,13 @@ def main():
     #######################
 
     transform = transforms.RandomChoice(
-    [change_speed([0.99, 0.01], 0.001), 
-     transforms.IdentityTransform()],
+    [change_speed([0.99, 1.01], 0.001), 
+     torch.nn.Identity()],
      p=[2,1]
 )
 
     train_set = AudioDataset(
-        Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050, augment=True, transform=transform
+        Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050, augment=False, transform=transform
     )
     test_set = AudioDataset(
         Path(args.data_path) / "test_files.txt",
@@ -103,7 +103,6 @@ def main():
 
     train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=2)
     test_loader = DataLoader(test_set, batch_size=1)
-
 
     #############################################
     # Load models & calculate the offset epochs #

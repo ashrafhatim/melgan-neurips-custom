@@ -1,11 +1,6 @@
-# from librosa.core import load
-# from librosa.util import normalize
-# import numpy as np
-# import torch
-
 import librosa
-import torch
 import random
+import numpy as np
 
 class change_speed(object):
     """Change the speed of the audio.
@@ -15,18 +10,17 @@ class change_speed(object):
         step: the steps between the desired speed range.
     """
 
-    def __init__(self, speed_facor, step=0.001):
+    def __init__(self, speed_factor, step=0.001):
         self.step = step
-        if isinstance(self.speed_factor, list):
-            self.speed_facor = range(self.speed_facor[0], self.speed_facor[1], self.step)
+        if isinstance(speed_factor, list):
+            self.speed_factor = list(np.arange(speed_factor[0], speed_factor[1], self.step))
         else:
-            self.speed_facor = speed_facor
+            self.speed_factor = speed_factor
 
     def __call__(self, sample):
         # sample = sample.numpy()
-
-        if isinstance(self.speed_factor, range):
-            factor = random.choice(self.speed_facor) 
+        if isinstance(self.speed_factor, list):
+            factor = random.choice(self.speed_factor) 
         else:
             factor = self.speed_factor
 

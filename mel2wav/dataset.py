@@ -67,7 +67,7 @@ class AudioDataset(torch.utils.data.Dataset):
         if self.augment:
             # amplitude = np.random.uniform(low=0.3, high=1.0)
             # data = data * amplitude
-            # new
+             
             data = self.transform(data)
 
         return torch.from_numpy(data).float(), sampling_rate
