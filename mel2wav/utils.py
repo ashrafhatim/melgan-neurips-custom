@@ -3,6 +3,9 @@ import scipy.io.wavfile
 import torch
 import torch.nn.functional as F
 
+import statistics
+
+
 
 def save_sample(file_path, sampling_rate, audio):
     """Helper function to save sample
@@ -27,7 +30,7 @@ def mel_rec_val_loss(val_loader, netG, fft):
             
             s_error = F.l1_loss(s_t, s_pred_t).item()
             errors.append(s_error)
-
-    return errors.mean()
+            
+    return statistics.mean(errors)
 
        
