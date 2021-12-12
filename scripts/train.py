@@ -122,14 +122,14 @@ def main():
     ##########################
     # Dumping original audio #
     ##########################
-    test_voc = []
-    test_audio = []
+    val_voc = []
+    val_audio = []
     for i, x_t in enumerate(val_loader):
         x_t = x_t.cuda()
         s_t = fft(x_t).detach()
 
-        test_voc.append(s_t.cuda())
-        test_audio.append(x_t)
+        val_voc.append(s_t.cuda())
+        val_audio.append(x_t)
 
         audio = x_t.squeeze().cpu()
         save_sample(root / ("original_%d.wav" % i), 22050, audio)
@@ -207,7 +207,7 @@ def main():
             if steps % args.save_interval == 0:
                 st = time.time()
                 with torch.no_grad():
-                    for i, (voc, _) in enumerate(zip(test_voc, test_audio)):
+                    for i, (voc, _) in enumerate(zip(val_voc, val_audio)):
                         pred_audio = netG(voc)
                         pred_audio = pred_audio.squeeze().cpu()
                         save_sample(root / ("generated_%d.wav" % i), 22050, pred_audio)
