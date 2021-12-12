@@ -4,7 +4,7 @@ sys.path.insert(0,'/home/jupyter/melgan-neurips-custom')
 from mel2wav.dataset import AudioDataset
 from mel2wav.modules import Generator, Discriminator, Audio2Mel
 from mel2wav.utils import save_sample, mel_rec_val_loss
-from mel2wav.custom_transforms import change_speed
+from mel2wav.custom_transforms import change_speed, change_amplitude
 
 import torch
 import torch.nn.functional as F
@@ -41,16 +41,21 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--seq_len", type=int, default=8192)
 
-    parser.add_argument("--epochs", type=int, default=3000)
+    parser.add_argument("--epochs", type=int, default=5000)
     parser.add_argument("--log_interval", type=int, default=100)
-    parser.add_argument("--save_interval", type=int, default=1000)
+    parser.add_argument("--save_interval", type=int, default=5000)
     parser.add_argument("--n_test_samples", type=int, default=8)
+    
+    parser.add_argument("--augment", type=bool, default=False)
+    parser.add_argument("--save_checkpoints_after", type=int, default=250000)
     args = parser.parse_args()
     return args
 
 
 def main():
     args = parse_args()
+    print("agument: ", args.augment)
+    print("save_checkpoints_after: ", args.save_checkpoints_after)
 
     root = Path(args.save_path)
     load_root = Path(args.load_path) if args.load_path else None
@@ -86,13 +91,14 @@ def main():
     #######################
 
     transform = transforms.RandomChoice(
-    [change_speed([0.99, 1.01], 0.001), 
+    [change_speed([0.99, 1.01], 0.001),
+     change_amplitude(low=0.3, high=1.0),
      torch.nn.Identity()],
-     p=[2,1]
+     p=[2,1,1]
 )
 
     train_set = AudioDataset(
-        Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050, augment=False, transform=transform
+        Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050, augment=args.augment, transform=transform
     )
     val_set = AudioDataset(
         Path(args.data_path) / "val_files.txt",
@@ -103,6 +109,9 @@ def main():
 
     train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=2)
     val_loader = DataLoader(val_set, batch_size=1)
+    
+    print("# of train samples: ", len(train_loader) * args.batch_size)
+    print("# of val samples: ", len(val_loader))
 
     #############################################
     # Load models & calculate the offset epochs #
@@ -112,10 +121,16 @@ def main():
     epoch_offset = 0
     if load_root and load_root.exists():
         steps = torch.load(load_root / "steps.pt")
-        netG.load_state_dict(torch.load(load_root / "netG_%d.pt" % steps))
-        optG.load_state_dict(torch.load(load_root / "optG_%d.pt" % steps))
-        netD.load_state_dict(torch.load(load_root / "netD_%d.pt" % steps))
-        optD.load_state_dict(torch.load(load_root / "optD_%d.pt" % steps))
+        if steps > args.save_checkpoints_after:
+            netG.load_state_dict(torch.load(load_root / ("netG_%d.pt" % steps)))
+            optG.load_state_dict(torch.load(load_root / ("optG_%d.pt" % steps)))
+            netD.load_state_dict(torch.load(load_root / ("netD_%d.pt" % steps)))
+            optD.load_state_dict(torch.load(load_root / ("optD_%d.pt" % steps)))
+        else:
+            netG.load_state_dict(torch.load(load_root / ("netG.pt" )))
+            optG.load_state_dict(torch.load(load_root / ("optG.pt" )))
+            netD.load_state_dict(torch.load(load_root / ("netD.pt" )))
+            optD.load_state_dict(torch.load(load_root / ("optD.pt" )))
         steps = steps + 1
         epoch_offset = max(0, int(steps / len(train_loader)))
 
@@ -217,12 +232,20 @@ def main():
                             epoch,
                             sample_rate=22050,
                         )
+                
+                if steps > args.save_checkpoints_after:
+                    torch.save(netG.state_dict(), root / ("netG_%d.pt" % steps))
+                    torch.save(optG.state_dict(), root / ("optG_%d.pt" % steps))
 
-                torch.save(netG.state_dict(), root / "netG_%d.pt" % steps)
-                torch.save(optG.state_dict(), root / "optG_%d.pt" % steps)
+                    torch.save(netD.state_dict(), root / ("netD_%d.pt" % steps))
+                    torch.save(optD.state_dict(), root / ("optD_%d.pt" % steps))
+                else:
+                    torch.save(netG.state_dict(), root / ("netG.pt" ))
+                    torch.save(optG.state_dict(), root / ("optG.pt" ))
 
-                torch.save(netD.state_dict(), root / "netD_%d.pt" % steps)
-                torch.save(optD.state_dict(), root / "optD_%d.pt" % steps)
+                    torch.save(netD.state_dict(), root / ("netD.pt" ))
+                    torch.save(optD.state_dict(), root / ("optD.pt" ))
+                    
 
                 torch.save(steps, root / "steps.pt")
 
