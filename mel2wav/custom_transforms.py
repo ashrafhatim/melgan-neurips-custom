@@ -43,7 +43,7 @@ class change_amplitude(object):
 
     def __call__(self, sample):
         
-        amplitude = np.random.uniform(low=0.3, high=1.0)
+        amplitude = np.random.uniform(low=self.low, high=self.high)
         sample = sample * amplitude
         
         return sample
