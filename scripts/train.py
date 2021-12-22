@@ -101,9 +101,8 @@ def main():
 
     transform = transforms.RandomChoice(
     [change_speed([0.99, 1.01], 0.001),
-     change_amplitude(low=0.3, high=1.0),
      torch.nn.Identity()],
-     p=[2,1,1]
+     p=[2,1]
 )
 
     train_set = AudioDataset(
