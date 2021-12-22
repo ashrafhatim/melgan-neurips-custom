@@ -20,6 +20,8 @@ import time
 import argparse
 from pathlib import Path
 
+import os
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -64,6 +66,9 @@ def main():
     root = Path(args.save_path)
     load_root = Path(args.load_path) if args.load_path else None
     root.mkdir(parents=True, exist_ok=True)
+
+    assert os.path.exists(root /  "steps.pt" ) and args.load_path, "Forgot to provide the load_path !!, make sure to add it to prevent overriding tensorboard."
+
 
     ####################################
     # Dump arguments and create logger #
