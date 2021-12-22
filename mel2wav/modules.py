@@ -188,12 +188,20 @@ class Discriminator(nn.Module):
                 ndf, n_layers, downsampling_factor
             )
 
-        self.downsample = nn.AvgPool1d(4, stride=2, padding=1, count_include_pad=False)
+        # self.downsample = nn.AvgPool1d(4, stride=2, padding=1, count_include_pad=False) 
+        
+        # new
+        self.downsample = nn.ModuleList()
+        self.downsample.append(nn.AvgPool1d(5, stride=3, padding=1, count_include_pad=False)  )
+        self.downsample.append(nn.AvgPool1d(7, stride=5, padding=1, count_include_pad=False)  )
+        self.downsample.append(nn.AvgPool1d(9, stride=7, padding=1, count_include_pad=False)  )
+        self.downsample.append(nn.AvgPool1d(13, stride=11, padding=1, count_include_pad=False)  )
+        # end new
         self.apply(weights_init)
 
     def forward(self, x):
         results = []
-        for key, disc in self.model.items():
+        for idx, key, disc in enumerate(self.model.items()):
             results.append(disc(x))
-            x = self.downsample(x)
+            x = self.downsample[idx](x)
         return results
