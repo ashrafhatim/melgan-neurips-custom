@@ -201,8 +201,7 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         results = []
-        for key, disc in self.model.items():
-            idx = int(key.split("_")[-1])
+        for idx, key, disc in enumerate(self.model.items()):
             results.append(disc(x))
             x = self.downsample[idx](x)
         return results
