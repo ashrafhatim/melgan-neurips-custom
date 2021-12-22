@@ -47,7 +47,10 @@ def parse_args():
     parser.add_argument("--n_test_samples", type=int, default=8)
     
     parser.add_argument("--augment", type=bool, default=False)
-    parser.add_argument("--save_checkpoints_after", type=int, default=250000)
+    parser.add_argument("--save_checkpoints", type=bool, default=False)
+    parser.add_argument("--load_from_checkpoints", type=bool, default=False)
+    parser.add_argument("--steps", type=int, default=0)
+
     args = parser.parse_args()
     return args
 
@@ -55,7 +58,8 @@ def parse_args():
 def main():
     args = parse_args()
     print("agument: ", args.augment)
-    print("save_checkpoints_after: ", args.save_checkpoints_after)
+    print("save_checkpoints: ", args.save_checkpoints)
+    print("load_from_checkpoints: ", args.load_from_checkpoints)
 
     root = Path(args.save_path)
     load_root = Path(args.load_path) if args.load_path else None
@@ -121,16 +125,19 @@ def main():
     epoch_offset = 0
     if load_root and load_root.exists():
         steps = torch.load(load_root / "steps.pt")
-        if steps > args.save_checkpoints_after:
+        
+        netG.load_state_dict(torch.load(load_root / ("netG.pt" )))
+        optG.load_state_dict(torch.load(load_root / ("optG.pt" )))
+        netD.load_state_dict(torch.load(load_root / ("netD.pt" )))
+        optD.load_state_dict(torch.load(load_root / ("optD.pt" )))
+
+        if args.load_from_checkpoints:
+            steps = args.steps
             netG.load_state_dict(torch.load(load_root / ("netG_%d.pt" % steps)))
             optG.load_state_dict(torch.load(load_root / ("optG_%d.pt" % steps)))
             netD.load_state_dict(torch.load(load_root / ("netD_%d.pt" % steps)))
             optD.load_state_dict(torch.load(load_root / ("optD_%d.pt" % steps)))
-        else:
-            netG.load_state_dict(torch.load(load_root / ("netG.pt" )))
-            optG.load_state_dict(torch.load(load_root / ("optG.pt" )))
-            netD.load_state_dict(torch.load(load_root / ("netD.pt" )))
-            optD.load_state_dict(torch.load(load_root / ("optD.pt" )))
+        
         steps = steps + 1
         epoch_offset = max(0, int(steps / len(train_loader)))
 
@@ -233,18 +240,20 @@ def main():
                             sample_rate=22050,
                         )
                 
-                if steps > args.save_checkpoints_after:
+
+                torch.save(netG.state_dict(), root / ("netG.pt" ))
+                torch.save(optG.state_dict(), root / ("optG.pt" ))
+
+                torch.save(netD.state_dict(), root / ("netD.pt" ))
+                torch.save(optD.state_dict(), root / ("optD.pt" ))
+
+                if args.save_checkpoints:
                     torch.save(netG.state_dict(), root / ("netG_%d.pt" % steps))
                     torch.save(optG.state_dict(), root / ("optG_%d.pt" % steps))
 
                     torch.save(netD.state_dict(), root / ("netD_%d.pt" % steps))
                     torch.save(optD.state_dict(), root / ("optD_%d.pt" % steps))
-                else:
-                    torch.save(netG.state_dict(), root / ("netG.pt" ))
-                    torch.save(optG.state_dict(), root / ("optG.pt" ))
-
-                    torch.save(netD.state_dict(), root / ("netD.pt" ))
-                    torch.save(optD.state_dict(), root / ("optD.pt" ))
+                
                     
 
                 torch.save(steps, root / "steps.pt")
