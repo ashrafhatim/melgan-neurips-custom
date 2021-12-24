@@ -172,6 +172,7 @@ class NLayerDiscriminator(nn.Module):
         self.model = model
 
     def forward(self, x):
+        print("here")
         results = []
         for key, layer in self.model.items():
             x = layer(x)
@@ -196,13 +197,16 @@ class Discriminator(nn.Module):
         self.downsample.append(nn.AvgPool1d(7, stride=5, padding=1, count_include_pad=False)  )
         self.downsample.append(nn.AvgPool1d(9, stride=7, padding=1, count_include_pad=False)  )
         self.downsample.append(nn.AvgPool1d(13, stride=11, padding=1, count_include_pad=False)  )
+        self.downsample.append(nn.AvgPool1d(15, stride=13, padding=1, count_include_pad=False)  )
         # end new
         self.apply(weights_init)
 
     def forward(self, x):
+        x_origin = x
         results = []
         for key, disc in self.model.items():
             idx = int(key.split("_")[-1])
             results.append(disc(x))
+            x = x_origin
             x = self.downsample[idx](x)
         return results
