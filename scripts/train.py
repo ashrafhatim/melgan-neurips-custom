@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument("--n_residual_layers", type=int, default=3)
 
     parser.add_argument("--ndf", type=int, default=16)
-    parser.add_argument("--num_D", type=int, default=3)
+    parser.add_argument("--num_D", type=int, default=7) # new
     parser.add_argument("--n_layers_D", type=int, default=4)
     parser.add_argument("--downsamp_factor", type=int, default=4)
     parser.add_argument("--lambda_feat", type=float, default=10)
@@ -48,10 +48,12 @@ def parse_args():
     parser.add_argument("--save_interval", type=int, default=5000)
     parser.add_argument("--n_test_samples", type=int, default=8)
     
-    parser.add_argument("--augment", type=bool, default=False)
-    parser.add_argument("--save_checkpoints", type=bool, default=False)
-    parser.add_argument("--load_from_checkpoints", type=bool, default=False)
+    # parser.add_argument("--augment", type=bool, default=True)# dont change this, change the code in dataset class if you want to add augmentation
+    parser.add_argument("--save_checkpoints", type=bool, default=True)
+    parser.add_argument("--load_from_checkpoints", type=bool, default=True)
     # parser.add_argument("--steps", type=int, default=0)
+    
+    parser.add_argument("--gpu_id", type=int, default=0)
 
     args = parser.parse_args()
     return args
@@ -59,7 +61,9 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print("agument: ", args.augment)
+    # print("agument: ", args.augment)
+    print("gpu_id: ", args.gpu_id)
+    print("num_D: ", args.num_D)
     print("save_checkpoints: ", args.save_checkpoints)
     print("load_from_checkpoints: ", args.load_from_checkpoints)
 
@@ -67,6 +71,7 @@ def main():
     load_root = Path(args.load_path) if args.load_path else None
     root.mkdir(parents=True, exist_ok=True)
     
+    # make sure to not overwrite the tensorboard writer
     assert (os.path.exists(root /  "steps.pt" ) and args.load_path) or not os.path.exists(root /  "steps.pt" ), "Forgot to provide the load_path !!, make sure to add it to prevent overriding tensorboard."
 
 
@@ -80,11 +85,11 @@ def main():
     #######################
     # Load PyTorch Models #
     #######################
-    netG = Generator(args.n_mel_channels, args.ngf, args.n_residual_layers).cuda()
+    netG = Generator(args.n_mel_channels, args.ngf, args.n_residual_layers).cuda(args.gpu_id)
     netD = Discriminator(
         args.num_D, args.ndf, args.n_layers_D, args.downsamp_factor
-    ).cuda()
-    fft = Audio2Mel(n_mel_channels=args.n_mel_channels).cuda()
+    ).cuda(args.gpu_id)
+    fft = Audio2Mel(n_mel_channels=args.n_mel_channels).cuda(args.gpu_id)
 
     # print(netG)
     # print(netD)
@@ -99,14 +104,21 @@ def main():
     # Create data loaders #
     #######################
 
+#     transform = transforms.RandomChoice(
+#     [change_speed([0.99, 1.01], 0.001),
+#      change_amplitude(low=0.3, high=1.0),
+#      torch.nn.Identity()],
+#      p=[2,1,1]
+# )
     transform = transforms.RandomChoice(
-    [change_speed([0.99, 1.01], 0.001),
-     torch.nn.Identity()],
-     p=[2,1]
+    [
+     change_amplitude(low=0.3, high=1.0)
+    ],
+     p=[1]
 )
 
     train_set = AudioDataset(
-        Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050, augment=args.augment, transform=transform
+        Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050, transform=transform
     )
     val_set = AudioDataset(
         Path(args.data_path) / "val_files.txt",
@@ -151,10 +163,10 @@ def main():
     val_voc = []
     val_audio = []
     for i, x_t in enumerate(val_loader):
-        x_t = x_t.cuda()
+        x_t = x_t.cuda(args.gpu_id)
         s_t = fft(x_t).detach()
 
-        val_voc.append(s_t.cuda())
+        val_voc.append(s_t.cuda(args.gpu_id))
         val_audio.append(x_t)
 
         audio = x_t.squeeze().cpu()
@@ -173,9 +185,9 @@ def main():
     best_mel_reconst = 1000000000
     for epoch in range(epoch_offset + 1, args.epochs + 1):
         for iterno, x_t in enumerate(train_loader):
-            x_t = x_t.cuda()
+            x_t = x_t.cuda(args.gpu_id)
             s_t = fft(x_t).detach()
-            x_pred_t = netG(s_t.cuda())
+            x_pred_t = netG(s_t.cuda(args.gpu_id))
 
             with torch.no_grad():
                 s_pred_t = fft(x_pred_t.detach())
@@ -184,8 +196,8 @@ def main():
             #######################
             # Train Discriminator #
             #######################
-            D_fake_det = netD(x_pred_t.cuda().detach())
-            D_real = netD(x_t.cuda())
+            D_fake_det = netD(x_pred_t.cuda(args.gpu_id).detach())
+            D_real = netD(x_t.cuda(args.gpu_id))
 
             loss_D = 0
             for scale in D_fake_det:
@@ -201,7 +213,7 @@ def main():
             ###################
             # Train Generator #
             ###################
-            D_fake = netD(x_pred_t.cuda())
+            D_fake = netD(x_pred_t.cuda(args.gpu_id))
 
             loss_G = 0
             for scale in D_fake:
@@ -260,7 +272,7 @@ def main():
                 
                 torch.save(steps, root / "steps.pt")
 
-                mel_reconst = mel_rec_val_loss(val_loader, netG, fft)
+                mel_reconst = mel_rec_val_loss(val_loader, netG, fft, args.gpu_id)
                 writer.add_scalar("loss/val_mel_reconst", mel_reconst, steps)
 
                 # if np.asarray(costs).mean(0)[-1] < best_mel_reconst:

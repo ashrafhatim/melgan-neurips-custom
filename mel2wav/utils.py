@@ -19,13 +19,13 @@ def save_sample(file_path, sampling_rate, audio):
     scipy.io.wavfile.write(file_path, sampling_rate, audio)
 
 
-def mel_rec_val_loss(val_loader, netG, fft):
+def mel_rec_val_loss(val_loader, netG, fft, gpu_id):
     errors = []
     with torch.no_grad():
         for x_t in val_loader:
-            x_t = x_t.cuda()
+            x_t = x_t.cuda(gpu_id)
             s_t = fft(x_t)
-            x_pred_t = netG(s_t.cuda())
+            x_pred_t = netG(s_t.cuda(gpu_id))
             s_pred_t = fft(x_pred_t)
             
             s_error = F.l1_loss(s_t, s_pred_t).item()
