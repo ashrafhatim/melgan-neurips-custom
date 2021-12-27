@@ -144,15 +144,16 @@ def main():
 
         if args.load_from_checkpoints:
             # steps = args.steps
-            netG.load_state_dict(torch.load(load_root / ("netG_%d.pt" % steps)))
-            optG.load_state_dict(torch.load(load_root / ("optG_%d.pt" % steps)))
-            netD.load_state_dict(torch.load(load_root / ("netD_%d.pt" % steps)))
-            optD.load_state_dict(torch.load(load_root / ("optD_%d.pt" % steps)))
+            print(load_root / ("netG_%d.pt" % steps))
+            netG.load_state_dict(torch.load(load_root / ("netG_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
+            optG.load_state_dict(torch.load(load_root / ("optG_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
+            netD.load_state_dict(torch.load(load_root / ("netD_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
+            optD.load_state_dict(torch.load(load_root / ("optD_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
         else:
-            netG.load_state_dict(torch.load(load_root / ("netG.pt" )))
-            optG.load_state_dict(torch.load(load_root / ("optG.pt" )))
-            netD.load_state_dict(torch.load(load_root / ("netD.pt" )))
-            optD.load_state_dict(torch.load(load_root / ("optD.pt" )))
+            netG.load_state_dict(torch.load(load_root / ("netG.pt" ), map_location='cuda:%d' % args.gpu_id))
+            optG.load_state_dict(torch.load(load_root / ("optG.pt" ), map_location='cuda:%d' % args.gpu_id))
+            netD.load_state_dict(torch.load(load_root / ("netD.pt" ), map_location='cuda:%d' % args.gpu_id))
+            optD.load_state_dict(torch.load(load_root / ("optD.pt" ), map_location='cuda:%d' % args.gpu_id))
         
         steps = steps + 1
         epoch_offset = max(0, int(steps / len(train_loader)))
