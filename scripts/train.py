@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument("--n_residual_layers", type=int, default=3)
 
     parser.add_argument("--ndf", type=int, default=16)
-    parser.add_argument("--num_D", type=int, default=7) # new
+    parser.add_argument("--num_D", type=int, default=3) # new
     parser.add_argument("--n_layers_D", type=int, default=4)
     parser.add_argument("--downsamp_factor", type=int, default=4)
     parser.add_argument("--lambda_feat", type=float, default=10)
@@ -52,6 +52,9 @@ def parse_args():
     parser.add_argument("--save_checkpoints", type=bool, default=True)
     parser.add_argument("--load_from_checkpoints", type=bool, default=True)
     # parser.add_argument("--steps", type=int, default=0)
+
+    parser.add_argument("--pre_trained", type=bool, default=False)
+
     
     parser.add_argument("--gpu_id", type=int, default=0)
 
@@ -66,6 +69,7 @@ def main():
     print("num_D: ", args.num_D)
     print("save_checkpoints: ", args.save_checkpoints)
     print("load_from_checkpoints: ", args.load_from_checkpoints)
+    print("pre_trained: ", args.pre_trained)
 
     root = Path(args.save_path)
     load_root = Path(args.load_path) if args.load_path else None
@@ -86,6 +90,9 @@ def main():
     # Load PyTorch Models #
     #######################
     netG = Generator(args.n_mel_channels, args.ngf, args.n_residual_layers).cuda(args.gpu_id)
+    if args.pre_trained:
+        netG.load_state_dict(torch.load("/home/jupyter/melgan-neurips-custom/models/linda_johnson.pt"))
+
     netD = Discriminator(
         args.num_D, args.ndf, args.n_layers_D, args.downsamp_factor
     ).cuda(args.gpu_id)
