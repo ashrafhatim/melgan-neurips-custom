@@ -1,5 +1,5 @@
 # Unofficial repository for the paper MelGAN: Generative Adversarial Networks for Conditional Waveform Synthesis
-# This code is intended to tackle the Arabic Text-to-speech task considering it as low-resource problem.
+## This code is intended to tackle the Arabic Text-to-speech task considering it as low-resource problem
 
 Previous works have found that generating coherent raw audio waveforms with GANs is challenging. In this [paper](https://arxiv.org/abs/1910.06711), they show that it is possible to train GANs reliably to generate high quality coherent waveforms by introducing a set of architectural changes and simple training techniques. Subjective evaluation metric (Mean Opinion Score, or MOS) shows the effectiveness of the proposed approach for high quality mel-spectrogram inversion. The model is non-autoregressive, fully convolutional, with significantly fewer parameters than competing models and generalizes to unseen speakers for mel-spectrogram inversion. Here we are focusing on training the Arabic TTS system with adversarial networks using publicly available data, evaluating the efficiency of MelGANs for low-resource speech datasets. The code is inspired by the official representation of [MelGAN](https://github.com/descriptinc/melgan-neurips). 
 
