@@ -115,6 +115,7 @@ def main():
     #####################
     optG = torch.optim.Adam(netG.parameters(), lr=1e-4, betas=(0.5, 0.9))
     optD = torch.optim.Adam(netD.parameters(), lr=1e-4, betas=(0.5, 0.9))
+    optD_helper = torch.optim.Adam(netD_helper.parameters(), lr=1e-4, betas=(0.5, 0.9))
 
     #######################
     # Create data loaders #
