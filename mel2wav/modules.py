@@ -192,6 +192,10 @@ class Discriminator(nn.Module):
         
         # new
         self.downsample = nn.ModuleList()
+        
+        # self.downsample.append(nn.AvgPool1d(4, stride=2, padding=1, count_include_pad=False)  )
+        # self.downsample.append(nn.AvgPool1d(4, stride=2, padding=1, count_include_pad=False)   )
+        
         self.downsample.append(nn.AvgPool1d(5, stride=3, padding=1, count_include_pad=False)  )
         self.downsample.append(nn.AvgPool1d(7, stride=5, padding=1, count_include_pad=False)  )
         self.downsample.append(nn.AvgPool1d(9, stride=7, padding=1, count_include_pad=False)  )

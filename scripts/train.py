@@ -52,9 +52,8 @@ def parse_args():
     parser.add_argument("--save_checkpoints", type=bool, default=True)
     parser.add_argument("--load_from_checkpoints", type=bool, default=True)
     # parser.add_argument("--steps", type=int, default=0)
-
+    
     parser.add_argument("--pre_trained", type=bool, default=False)
-
     
     parser.add_argument("--gpu_id", type=int, default=0)
 
@@ -92,10 +91,16 @@ def main():
     netG = Generator(args.n_mel_channels, args.ngf, args.n_residual_layers).cuda(args.gpu_id)
     if args.pre_trained:
         netG.load_state_dict(torch.load("/home/jupyter/melgan-neurips-custom/models/linda_johnson.pt"))
+        print("the Generator pre-trained model has been loaded completely!")
 
+        
     netD = Discriminator(
         args.num_D, args.ndf, args.n_layers_D, args.downsamp_factor
     ).cuda(args.gpu_id)
+    if args.pre_trained:
+        netD.load_state_dict(torch.load("/home/jupyter/melgan-neurips-custom/logs/exp7/best_netD.pt"))
+        print("the Discriminator pre-trained model has been loaded completely!")
+        
     fft = Audio2Mel(n_mel_channels=args.n_mel_channels).cuda(args.gpu_id)
 
     # print(netG)
@@ -106,7 +111,6 @@ def main():
     #####################
     optG = torch.optim.Adam(netG.parameters(), lr=1e-4, betas=(0.5, 0.9))
     optD = torch.optim.Adam(netD.parameters(), lr=1e-4, betas=(0.5, 0.9))
-
 
     #######################
     # Create data loaders #
@@ -140,8 +144,7 @@ def main():
     
     print("# of train samples: ", len(train_loader) * args.batch_size)
     print("# of val samples: ", len(val_loader))
-
-
+    
     # train the discriminator a bit
     if args.pre_trained:
         step_d = 0
@@ -151,10 +154,9 @@ def main():
                 s_t = fft(x_t).detach()
                 x_pred_t = netG(s_t.cuda(args.gpu_id))
 
-                # with torch.no_grad():
-                #     s_pred_t = fft(x_pred_t.detach())
-                #     s_error = F.l1_loss(s_t, s_pred_t).item()
-                #     print("s_error= ", s_error)
+                with torch.no_grad():
+                    s_pred_t = fft(x_pred_t.detach())
+                    s_error = F.l1_loss(s_t, s_pred_t).item()
 
                 # Train Discriminator #
         
@@ -175,6 +177,7 @@ def main():
                 step_d += 1
                 if step_d >= 2000:
                     break
+                    
 
     #############################################
     # Load models & calculate the offset epochs #
