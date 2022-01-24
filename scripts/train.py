@@ -100,7 +100,11 @@ def main():
     if args.pre_trained:
         netD.load_state_dict(torch.load("/home/jupyter/melgan-neurips-custom/logs/exp7/best_netD.pt"))
         print("the Discriminator pre-trained model has been loaded completely!")
-        
+
+
+    netD_helper = Discriminator(
+        1, args.ndf, args.n_layers_D, args.downsamp_factor
+    ).cuda(args.gpu_id)    
     fft = Audio2Mel(n_mel_channels=args.n_mel_channels).cuda(args.gpu_id)
 
     # print(netG)
