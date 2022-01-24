@@ -65,6 +65,9 @@ class AudioDataset(torch.utils.data.Dataset):
 
         # audio = audio / 32768.0
         # return audio.unsqueeze(0)
+        
+        if len(out) == 1:
+            return out[0]
         return out
 
     def __len__(self):
