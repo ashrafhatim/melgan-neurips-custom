@@ -41,18 +41,31 @@ class AudioDataset(torch.utils.data.Dataset):
         # Read audio
         filename = self.audio_files[index]
         audio, sampling_rate = self.load_wav_to_torch(filename)
-        # Take segment
-        if audio.size(0) >= self.segment_length:
-            max_audio_start = audio.size(0) - self.segment_length
-            audio_start = random.randint(0, max_audio_start)
-            audio = audio[audio_start : audio_start + self.segment_length]
-        else:
-            audio = F.pad(
-                audio, (0, self.segment_length - audio.size(0)), "constant"
-            ).data
+        # # Take segment
+        # if audio.size(0) >= self.segment_length:
+        #     max_audio_start = audio.size(0) - self.segment_length
+        #     audio_start = random.randint(0, max_audio_start)
+        #     audio1 = audio[audio_start : audio_start + self.segment_length]
+        # else:
+        #     audio1 = F.pad(
+        #         audio, (0, self.segment_length - audio.size(0)), "constant"
+        #     ).data
+
+        # Take segment1
+        out = torch.tensor([])
+        for i in len(self.segment_length):
+            if audio.size(0) >= self.segment_length[i]:
+                max_audio_start = audio.size(0) - self.segment_length[i]
+                audio_start = random.randint(0, max_audio_start)
+                out.append( audio[audio_start : audio_start + self.segment_length[i]].unsqueeze(0) )
+            else:
+                out.append( F.pad(
+                    audio, (0, self.segment_length[i] - audio.size(0)), "constant"
+                ).data.unsqueeze(0) )
 
         # audio = audio / 32768.0
-        return audio.unsqueeze(0)
+        # return audio.unsqueeze(0)
+        return out
 
     def __len__(self):
         return len(self.audio_files)
