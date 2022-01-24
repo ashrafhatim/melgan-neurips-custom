@@ -107,6 +107,7 @@ def main():
     optG = torch.optim.Adam(netG.parameters(), lr=1e-4, betas=(0.5, 0.9))
     optD = torch.optim.Adam(netD.parameters(), lr=1e-4, betas=(0.5, 0.9))
 
+
     #######################
     # Create data loaders #
     #######################
@@ -139,6 +140,41 @@ def main():
     
     print("# of train samples: ", len(train_loader) * args.batch_size)
     print("# of val samples: ", len(val_loader))
+
+
+    # train the discriminator a bit
+    if args.pre_trained:
+        step_d = 0
+        while step_d < 2000:
+            for iterno, x_t in enumerate(train_loader):
+                x_t = x_t.cuda(args.gpu_id)
+                s_t = fft(x_t).detach()
+                x_pred_t = netG(s_t.cuda(args.gpu_id))
+
+                # with torch.no_grad():
+                #     s_pred_t = fft(x_pred_t.detach())
+                #     s_error = F.l1_loss(s_t, s_pred_t).item()
+                #     print("s_error= ", s_error)
+
+                # Train Discriminator #
+        
+                D_fake_det = netD(x_pred_t.cuda(args.gpu_id).detach())
+                D_real = netD(x_t.cuda(args.gpu_id))
+
+                loss_D = 0
+                for scale in D_fake_det:
+                    loss_D += F.relu(1 + scale[-1]).mean()
+
+                for scale in D_real:
+                    loss_D += F.relu(1 - scale[-1]).mean()
+
+                netD.zero_grad()
+                loss_D.backward()
+                optD.step()
+
+                step_d += 1
+                if step_d >= 2000:
+                    break
 
     #############################################
     # Load models & calculate the offset epochs #
