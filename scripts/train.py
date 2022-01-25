@@ -41,7 +41,7 @@ def parse_args():
 
     parser.add_argument("--data_path", default=None, type=Path)
     parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--seq_len", type=int, default=8192)
+    parser.add_argument("--seq_len", type=list, default=[8192, 2048])
 
     parser.add_argument("--epochs", type=int, default=5000)
     parser.add_argument("--log_interval", type=int, default=100)
@@ -139,7 +139,7 @@ def main():
     )
     val_set = AudioDataset(
         Path(args.data_path) / "val_files.txt",
-        22050 * 4,
+        [22050 * 4],
         sampling_rate=22050,
         augment=False,
     )
@@ -155,18 +155,25 @@ def main():
         step_d = 0
         while step_d < 2000:
             for iterno, x_t in enumerate(train_loader):
-                x_t = x_t.cuda(args.gpu_id)
-                s_t = fft(x_t).detach()
+                x_t = [ele.cuda(args.gpu_id) for ele in x_t]
+
+                s_t = fft(x_t[0]).detach()
+                s_t1 = fft(x_t[1]).detach()
+
                 x_pred_t = netG(s_t.cuda(args.gpu_id))
+                x_pred_t1 = netG(s_t1.cuda(args.gpu_id))
 
                 with torch.no_grad():
                     s_pred_t = fft(x_pred_t.detach())
+                    s_pred_t1 = fft(x_pred_t1.detach())
                     s_error = F.l1_loss(s_t, s_pred_t).item()
+                    s_error += F.l1_loss(s_t1, s_pred_t1).item()
 
                 # Train Discriminator #
-        
+                
+                # original
                 D_fake_det = netD(x_pred_t.cuda(args.gpu_id).detach())
-                D_real = netD(x_t.cuda(args.gpu_id))
+                D_real = netD(x_t[0].cuda(args.gpu_id))
 
                 loss_D = 0
                 for scale in D_fake_det:
@@ -175,9 +182,22 @@ def main():
                 for scale in D_real:
                     loss_D += F.relu(1 - scale[-1]).mean()
 
+                # new
+                D_fake_det1 = netD_helper(x_pred_t1.cuda(args.gpu_id).detach())
+                D_real1 = netD_helper(x_t[1].cuda(args.gpu_id))
+
+                # loss_D = 0
+                for scale in D_fake_det1:
+                    loss_D += F.relu(1 + scale[-1]).mean()
+
+                for scale in D_real1:
+                    loss_D += F.relu(1 - scale[-1]).mean()
+
                 netD.zero_grad()
+                netD_helper.zero_grad()
                 loss_D.backward()
                 optD.step()
+                optD_helper.step()
 
                 step_d += 1
                 if step_d >= 2000:
@@ -200,11 +220,17 @@ def main():
             optG.load_state_dict(torch.load(load_root / ("optG_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
             netD.load_state_dict(torch.load(load_root / ("netD_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
             optD.load_state_dict(torch.load(load_root / ("optD_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
+
+            netD_helper.load_state_dict(torch.load(load_root / ("netD_helper_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
+            optD_helper.load_state_dict(torch.load(load_root / ("optD_helper_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
         else:
             netG.load_state_dict(torch.load(load_root / ("netG.pt" ), map_location='cuda:%d' % args.gpu_id))
             optG.load_state_dict(torch.load(load_root / ("optG.pt" ), map_location='cuda:%d' % args.gpu_id))
             netD.load_state_dict(torch.load(load_root / ("netD.pt" ), map_location='cuda:%d' % args.gpu_id))
             optD.load_state_dict(torch.load(load_root / ("optD.pt" ), map_location='cuda:%d' % args.gpu_id))
+
+            netD_helper.load_state_dict(torch.load(load_root / ("netD_helper.pt" ), map_location='cuda:%d' % args.gpu_id))
+            optD_helper.load_state_dict(torch.load(load_root / ("optD_helper.pt" ), map_location='cuda:%d' % args.gpu_id))
         
         steps = steps + 1
         epoch_offset = max(0, int(steps / len(train_loader)))
@@ -237,19 +263,26 @@ def main():
     best_mel_reconst = 1000000000
     for epoch in range(epoch_offset + 1, args.epochs + 1):
         for iterno, x_t in enumerate(train_loader):
-            x_t = x_t.cuda(args.gpu_id)
-            s_t = fft(x_t).detach()
+            x_t = [ele.cuda(args.gpu_id) for ele in x_t]
+
+            s_t = fft(x_t[0]).detach()
+            s_t1 = fft(x_t[1]).detach()
+
             x_pred_t = netG(s_t.cuda(args.gpu_id))
+            x_pred_t1 = netG(s_t1.cuda(args.gpu_id))
 
             with torch.no_grad():
                 s_pred_t = fft(x_pred_t.detach())
+                s_pred_t1 = fft(x_pred_t1.detach())
                 s_error = F.l1_loss(s_t, s_pred_t).item()
+                s_error += F.l1_loss(s_t1, s_pred_t1).item()
 
             #######################
             # Train Discriminator #
             #######################
+            # original
             D_fake_det = netD(x_pred_t.cuda(args.gpu_id).detach())
-            D_real = netD(x_t.cuda(args.gpu_id))
+            D_real = netD(x_t[0].cuda(args.gpu_id))
 
             loss_D = 0
             for scale in D_fake_det:
@@ -258,17 +291,33 @@ def main():
             for scale in D_real:
                 loss_D += F.relu(1 - scale[-1]).mean()
 
+            # new
+            D_fake_det1 = netD_helper(x_pred_t1.cuda(args.gpu_id).detach())
+            D_real1 = netD_helper(x_t[1].cuda(args.gpu_id))
+
+            # loss_D = 0
+            for scale in D_fake_det1:
+                loss_D += F.relu(1 + scale[-1]).mean()
+
+            for scale in D_real1:
+                loss_D += F.relu(1 - scale[-1]).mean()
+
             netD.zero_grad()
+            netD_helper.zero_grad()
             loss_D.backward()
             optD.step()
+            optD_helper.step()
 
             ###################
             # Train Generator #
             ###################
             D_fake = netD(x_pred_t.cuda(args.gpu_id))
+            D_fake1 = netD_helper(x_pred_t1.cuda(args.gpu_id))
 
             loss_G = 0
             for scale in D_fake:
+                loss_G += -scale[-1].mean()
+            for scale in D_fake1:
                 loss_G += -scale[-1].mean()
 
             loss_feat = 0
@@ -278,6 +327,9 @@ def main():
             for i in range(args.num_D):
                 for j in range(len(D_fake[i]) - 1):
                     loss_feat += wt * F.l1_loss(D_fake[i][j], D_real[i][j].detach())
+            
+            for j in range(len(D_fake1[0]) - 1):
+                    loss_feat += wt * F.l1_loss(D_fake1[0][j], D_real1[0][j].detach())
 
             netG.zero_grad()
             (loss_G + args.lambda_feat * loss_feat).backward()
@@ -314,12 +366,18 @@ def main():
 
                     torch.save(netD.state_dict(), root / ("netD_%d.pt" % steps))
                     torch.save(optD.state_dict(), root / ("optD_%d.pt" % steps))
+
+                    torch.save(netD_helper.state_dict(), root / ("netD_helper_%d.pt" % steps))
+                    torch.save(optD_helper.state_dict(), root / ("optD_helper_%d.pt" % steps))
                 else:
                     torch.save(netG.state_dict(), root / ("netG.pt" ))
                     torch.save(optG.state_dict(), root / ("optG.pt" ))
 
                     torch.save(netD.state_dict(), root / ("netD.pt" ))
                     torch.save(optD.state_dict(), root / ("optD.pt" ))
+
+                    torch.save(netD_helper.state_dict(), root / ("netD_helper.pt" ))
+                    torch.save(optD_helper.state_dict(), root / ("optD_helper.pt" ))
                     
                 
                 torch.save(steps, root / "steps.pt")

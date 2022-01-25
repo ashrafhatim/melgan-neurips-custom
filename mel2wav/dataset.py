@@ -52,8 +52,8 @@ class AudioDataset(torch.utils.data.Dataset):
         #     ).data
 
         # Take segment1
-        out = torch.tensor([])
-        for i in len(self.segment_length):
+        out = []
+        for i in range(len(self.segment_length)):
             if audio.size(0) >= self.segment_length[i]:
                 max_audio_start = audio.size(0) - self.segment_length[i]
                 audio_start = random.randint(0, max_audio_start)
