@@ -103,7 +103,7 @@ def main():
 
 
     netD_helper = Discriminator(
-        1, args.ndf, args.n_layers_D, args.downsamp_factor
+        1, args.ndf//2, args.n_layers_D, args.downsamp_factor, 512
     ).cuda(args.gpu_id)    
     fft = Audio2Mel(n_mel_channels=args.n_mel_channels).cuda(args.gpu_id)
 

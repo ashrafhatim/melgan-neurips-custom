@@ -131,7 +131,7 @@ class Generator(nn.Module):
 
 
 class NLayerDiscriminator(nn.Module):
-    def __init__(self, ndf, n_layers, downsampling_factor):
+    def __init__(self, ndf, n_layers, downsampling_factor, min_ndf):
         super().__init__()
         model = nn.ModuleDict()
 
@@ -145,7 +145,7 @@ class NLayerDiscriminator(nn.Module):
         stride = downsampling_factor
         for n in range(1, n_layers + 1):
             nf_prev = nf
-            nf = min(nf * stride, 1024)
+            nf = min(nf * stride, min_ndf)
 
             model["layer_%d" % n] = nn.Sequential(
                 WNConv1d(
@@ -159,7 +159,7 @@ class NLayerDiscriminator(nn.Module):
                 nn.LeakyReLU(0.2, True),
             )
 
-        nf = min(nf * 2, 1024)
+        nf = min(nf * 2, min_ndf)
         model["layer_%d" % (n_layers + 1)] = nn.Sequential(
             WNConv1d(nf_prev, nf, kernel_size=5, stride=1, padding=2),
             nn.LeakyReLU(0.2, True),
@@ -180,12 +180,12 @@ class NLayerDiscriminator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, num_D, ndf, n_layers, downsampling_factor):
+    def __init__(self, num_D, ndf, n_layers, downsampling_factor, min_ndf=1024):
         super().__init__()
         self.model = nn.ModuleDict()
         for i in range(num_D):
             self.model[f"disc_{i}"] = NLayerDiscriminator(
-                ndf, n_layers, downsampling_factor
+                ndf, n_layers, downsampling_factor, min_ndf
             )
 
         # self.downsample = nn.AvgPool1d(4, stride=2, padding=1, count_include_pad=False) 
