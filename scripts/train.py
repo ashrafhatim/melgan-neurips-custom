@@ -135,7 +135,8 @@ def main():
 )
 
     train_set = AudioDataset(
-        Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050, transform=transform
+        Path(args.data_path) / "train_files.txt", args.seq_len, sampling_rate=22050, transform=transform, 
+        training_files1= Path(args.data_path) / "train_files_english.txt",
     )
     val_set = AudioDataset(
         Path(args.data_path) / "val_files.txt",
@@ -264,6 +265,11 @@ def main():
     for epoch in range(epoch_offset + 1, args.epochs + 1):
         for iterno, x_t in enumerate(train_loader):
             x_t = [ele.cuda(args.gpu_id) for ele in x_t]
+
+            # rearrange the effective batch
+            # t0 = x_t[1][:,0:1,:]
+            # t1 = x_t[1][:,1:2,:]
+            # x_t[1] = torch.concat((t0,t1), axis=0)
 
             s_t = fft(x_t[0]).detach()
             s_t1 = fft(x_t[1]).detach()

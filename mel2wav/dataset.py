@@ -27,20 +27,25 @@ class AudioDataset(torch.utils.data.Dataset):
     spectrogram, audio pair.
     """
 
-    def __init__(self, training_files, segment_length, sampling_rate, augment=True, transform=None):
+    def __init__(self, training_files, segment_length, sampling_rate, augment=True, transform=None, training_files1=None):
         self.sampling_rate = sampling_rate
         self.segment_length = segment_length
         self.audio_files = files_to_list(training_files)
         self.audio_files = [Path(training_files).parent / x for x in self.audio_files]
         random.seed(1234)
         random.shuffle(self.audio_files)
+
+        if training_files1:
+            self.audio_files1 = files_to_list(training_files1)
+            self.audio_files1 = [Path(training_files1).parent / x for x in self.audio_files1]
+            random.shuffle(self.audio_files1)
+
         self.augment = augment
         self.transform=transform
 
     def __getitem__(self, index):
         # Read audio
-        filename = self.audio_files[index]
-        audio, sampling_rate = self.load_wav_to_torch(filename)
+        
         # # Take segment
         # if audio.size(0) >= self.segment_length:
         #     max_audio_start = audio.size(0) - self.segment_length
@@ -53,21 +58,63 @@ class AudioDataset(torch.utils.data.Dataset):
 
         # Take segment1
         out = []
-        for i in range(len(self.segment_length)):
-            if audio.size(0) >= self.segment_length[i]:
-                max_audio_start = audio.size(0) - self.segment_length[i]
-                audio_start = random.randint(0, max_audio_start)
-                out.append( audio[audio_start : audio_start + self.segment_length[i]].unsqueeze(0) )
-            else:
-                out.append( F.pad(
-                    audio, (0, self.segment_length[i] - audio.size(0)), "constant"
-                ).data.unsqueeze(0) )
+        
+        # main discs
+        filename = self.audio_files[index]
+        audio, sampling_rate = self.load_wav_to_torch(filename)
+
+        if audio.size(0) >= self.segment_length[0]:
+            max_audio_start = audio.size(0) - self.segment_length[0]
+            audio_start = random.randint(0, max_audio_start)
+            out.append( audio[audio_start : audio_start + self.segment_length[0]].unsqueeze(0) )
+        else:
+            out.append( F.pad(
+                audio, (0, self.segment_length[0] - audio.size(0)), "constant"
+            ).data.unsqueeze(0) )
+
+
+        # helper disc
+        if len(self.segment_length) > 1:
+
+            options = ["arabic", "english"]
+            lang = random.choices(options, weights=[1,1], k=1)[0]
+
+            if lang=="arabic":
+                if audio.size(0) >= self.segment_length[1]:
+                    max_audio_start = audio.size(0) - self.segment_length[1]
+                    audio_start = random.randint(0, max_audio_start)
+                    out.append( audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0) )
+                else:
+                    out.append( F.pad(
+                        audio, (0, self.segment_length[1] - audio.size(0)), "constant"
+                    ).data.unsqueeze(0) )
+                
+                
+
+            elif lang=="english":
+                index = random.choice(list(range(len(self.audio_files1))))
+                filename = self.audio_files1[index]
+                audio, sampling_rate = self.load_wav_to_torch(filename)
+
+                if audio.size(0) >= self.segment_length[1]:
+                    max_audio_start = audio.size(0) - self.segment_length[1]
+                    audio_start = random.randint(0, max_audio_start)
+                    out.append( audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0) )
+                else:
+                    out.append( F.pad(
+                        audio, (0, self.segment_length[1] - audio.size(0)), "constant"
+                    ).data.unsqueeze(0) )
+
+        
+
 
         # audio = audio / 32768.0
         # return audio.unsqueeze(0)
         
+        # make sure that val_loader does not receive list
         if len(out) == 1:
             return out[0]
+
         return out
 
     def __len__(self):
