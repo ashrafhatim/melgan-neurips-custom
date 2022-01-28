@@ -27,7 +27,7 @@ class AudioDataset(torch.utils.data.Dataset):
     spectrogram, audio pair.
     """
 
-    def __init__(self, training_files, segment_length, sampling_rate, augment=True, transform=None, training_files1=None):
+    def __init__(self, training_files, segment_length, sampling_rate, augment=True, transform=None, training_files_english=None):
         self.sampling_rate = sampling_rate
         self.segment_length = segment_length
         self.audio_files = files_to_list(training_files)
@@ -35,10 +35,10 @@ class AudioDataset(torch.utils.data.Dataset):
         random.seed(1234)
         random.shuffle(self.audio_files)
 
-        if training_files1:
-            self.audio_files1 = files_to_list(training_files1)
-            self.audio_files1 = [Path(training_files1).parent / x for x in self.audio_files1]
-            random.shuffle(self.audio_files1)
+        if training_files_english:
+            self.audio_files_english = files_to_list(training_files_english)
+            self.audio_files_english = [Path(training_files_english).parent / x for x in self.audio_files_english]
+            random.shuffle(self.audio_files_english)
 
         self.augment = augment
         self.transform=transform
@@ -79,31 +79,40 @@ class AudioDataset(torch.utils.data.Dataset):
             options = ["arabic", "english"]
             lang = random.choices(options, weights=[1,1], k=1)[0]
 
-            if lang=="arabic":
-                if audio.size(0) >= self.segment_length[1]:
-                    max_audio_start = audio.size(0) - self.segment_length[1]
-                    audio_start = random.randint(0, max_audio_start)
-                    out.append( audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0) )
-                else:
-                    out.append( F.pad(
-                        audio, (0, self.segment_length[1] - audio.size(0)), "constant"
-                    ).data.unsqueeze(0) )
-                
-                
-
-            elif lang=="english":
-                index = random.choice(list(range(len(self.audio_files1))))
-                filename = self.audio_files1[index]
+            if lang=="english":
+                index = random.choice(list(range(len(self.audio_files_english))))
+                filename = self.audio_files_english[index]
                 audio, sampling_rate = self.load_wav_to_torch(filename)
+                
+            if audio.size(0) >= self.segment_length[1]:
+                max_audio_start = audio.size(0) - self.segment_length[1]
+                audio_start = random.randint(0, max_audio_start)
+                segment1 = audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0)
 
-                if audio.size(0) >= self.segment_length[1]:
-                    max_audio_start = audio.size(0) - self.segment_length[1]
-                    audio_start = random.randint(0, max_audio_start)
-                    out.append( audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0) )
-                else:
-                    out.append( F.pad(
-                        audio, (0, self.segment_length[1] - audio.size(0)), "constant"
-                    ).data.unsqueeze(0) )
+                audio_start = random.randint(0, max_audio_start)
+                segment2 = audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0)
+
+                out.append( torch.concat((segment1,segment2), axis=0) )
+            else:
+                out.append( F.pad(
+                    audio, (0, self.segment_length[1] - audio.size(0)), "constant"
+                ).data.unsqueeze(0) )
+                
+                
+
+            # elif lang=="english":
+            #     index = random.choice(list(range(len(self.audio_files_english))))
+            #     filename = self.audio_files_english[index]
+            #     audio, sampling_rate = self.load_wav_to_torch(filename)
+
+            #     if audio.size(0) >= self.segment_length[1]:
+            #         max_audio_start = audio.size(0) - self.segment_length[1]
+            #         audio_start = random.randint(0, max_audio_start)
+            #         out.append( audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0) )
+            #     else:
+            #         out.append( F.pad(
+            #             audio, (0, self.segment_length[1] - audio.size(0)), "constant"
+            #         ).data.unsqueeze(0) )
 
         
 
