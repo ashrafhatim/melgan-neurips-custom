@@ -114,8 +114,8 @@ def main():
     # Create optimizers #
     #####################
     optG = torch.optim.Adam(netG.parameters(), lr=1e-4, betas=(0.5, 0.9))
-    optD = torch.optim.Adam(netD.parameters(), lr=1e-4, betas=(0.5, 0.9))
-    optD_helper = torch.optim.Adam(netD_helper.parameters(), lr=1e-4, betas=(0.5, 0.9))
+    optD = torch.optim.Adam([{"params":netD.parameters()}, {"params":netD_helper.parameters()}], lr=1e-4, betas=(0.5, 0.9))
+    # optD_helper = torch.optim.Adam(netD_helper.parameters(), lr=1e-4, betas=(0.5, 0.9))
 
     #######################
     # Create data loaders #
@@ -197,7 +197,7 @@ def main():
                 netD_helper.zero_grad()
                 loss_D.backward()
                 optD.step()
-                optD_helper.step()
+                # optD_helper.step()
 
                 step_d += 1
                 if step_d >= 2000:
@@ -222,7 +222,7 @@ def main():
             optD.load_state_dict(torch.load(load_root / ("optD_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
 
             netD_helper.load_state_dict(torch.load(load_root / ("netD_helper_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
-            optD_helper.load_state_dict(torch.load(load_root / ("optD_helper_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
+            # optD_helper.load_state_dict(torch.load(load_root / ("optD_helper_%d.pt" % steps), map_location='cuda:%d' % args.gpu_id))
         else:
             netG.load_state_dict(torch.load(load_root / ("netG.pt" ), map_location='cuda:%d' % args.gpu_id))
             optG.load_state_dict(torch.load(load_root / ("optG.pt" ), map_location='cuda:%d' % args.gpu_id))
@@ -230,7 +230,7 @@ def main():
             optD.load_state_dict(torch.load(load_root / ("optD.pt" ), map_location='cuda:%d' % args.gpu_id))
 
             netD_helper.load_state_dict(torch.load(load_root / ("netD_helper.pt" ), map_location='cuda:%d' % args.gpu_id))
-            optD_helper.load_state_dict(torch.load(load_root / ("optD_helper.pt" ), map_location='cuda:%d' % args.gpu_id))
+            # optD_helper.load_state_dict(torch.load(load_root / ("optD_helper.pt" ), map_location='cuda:%d' % args.gpu_id))
         
         steps = steps + 1
         epoch_offset = max(0, int(steps / len(train_loader)))
@@ -306,7 +306,7 @@ def main():
             netD_helper.zero_grad()
             loss_D.backward()
             optD.step()
-            optD_helper.step()
+            # optD_helper.step()
 
             ###################
             # Train Generator #
@@ -368,7 +368,7 @@ def main():
                     torch.save(optD.state_dict(), root / ("optD_%d.pt" % steps))
 
                     torch.save(netD_helper.state_dict(), root / ("netD_helper_%d.pt" % steps))
-                    torch.save(optD_helper.state_dict(), root / ("optD_helper_%d.pt" % steps))
+                    # torch.save(optD_helper.state_dict(), root / ("optD_helper_%d.pt" % steps))
                 else:
                     torch.save(netG.state_dict(), root / ("netG.pt" ))
                     torch.save(optG.state_dict(), root / ("optG.pt" ))
@@ -377,7 +377,7 @@ def main():
                     torch.save(optD.state_dict(), root / ("optD.pt" ))
 
                     torch.save(netD_helper.state_dict(), root / ("netD_helper.pt" ))
-                    torch.save(optD_helper.state_dict(), root / ("optD_helper.pt" ))
+                    # torch.save(optD_helper.state_dict(), root / ("optD_helper.pt" ))
                     
                 
                 torch.save(steps, root / "steps.pt")
