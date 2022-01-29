@@ -272,8 +272,6 @@ def main():
                 t1 = x_t[1][:,1:2,:]
                 x_t[1] = torch.concat((t0,t1), axis=0)
 
-            print("shapes: ", x_t[0].shape, x_t[1].shape)
-            break
 
             s_t = fft(x_t[0]).detach()
             s_t1 = fft(x_t[1]).detach()
