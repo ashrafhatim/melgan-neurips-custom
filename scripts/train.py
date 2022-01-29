@@ -44,7 +44,7 @@ def parse_args():
     parser.add_argument("--seq_len", type=list, default=[8192, 1024])
 
     parser.add_argument("--epochs", type=int, default=5000)
-    parser.add_argument("--log_interval", type=int, default=1000)
+    parser.add_argument("--log_interval", type=int, default=100)
     parser.add_argument("--save_interval", type=int, default=5000)
     parser.add_argument("--n_test_samples", type=int, default=8)
     
