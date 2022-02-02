@@ -151,58 +151,58 @@ def main():
     print("# of train samples: ", len(train_loader) * args.batch_size)
     print("# of val samples: ", len(val_loader))
     
-    # train the discriminator a bit
-    if args.pre_trained:
-        step_d = 0
-        while step_d < 2000:
-            for iterno, x_t in enumerate(train_loader):
-                x_t = [ele.cuda(args.gpu_id) for ele in x_t]
+    # # train the discriminator a bit
+    # if args.pre_trained:
+    #     step_d = 0
+    #     while step_d < 2000:
+    #         for iterno, x_t in enumerate(train_loader):
+    #             x_t = [ele.cuda(args.gpu_id) for ele in x_t]
 
-                s_t = fft(x_t[0]).detach()
-                s_t1 = fft(x_t[1]).detach()
+    #             s_t = fft(x_t[0]).detach()
+    #             s_t1 = fft(x_t[1]).detach()
 
-                x_pred_t = netG(s_t.cuda(args.gpu_id))
-                x_pred_t1 = netG(s_t1.cuda(args.gpu_id))
+    #             x_pred_t = netG(s_t.cuda(args.gpu_id))
+    #             x_pred_t1 = netG(s_t1.cuda(args.gpu_id))
 
-                with torch.no_grad():
-                    s_pred_t = fft(x_pred_t.detach())
-                    s_pred_t1 = fft(x_pred_t1.detach())
-                    s_error = F.l1_loss(s_t, s_pred_t).item()
-                    s_error += F.l1_loss(s_t1, s_pred_t1).item()
+    #             with torch.no_grad():
+    #                 s_pred_t = fft(x_pred_t.detach())
+    #                 s_pred_t1 = fft(x_pred_t1.detach())
+    #                 s_error = F.l1_loss(s_t, s_pred_t).item()
+    #                 s_error += F.l1_loss(s_t1, s_pred_t1).item()
 
-                # Train Discriminator #
+    #             # Train Discriminator #
                 
-                # original
-                D_fake_det = netD(x_pred_t.cuda(args.gpu_id).detach())
-                D_real = netD(x_t[0].cuda(args.gpu_id))
+    #             # original
+    #             D_fake_det = netD(x_pred_t.cuda(args.gpu_id).detach())
+    #             D_real = netD(x_t[0].cuda(args.gpu_id))
 
-                loss_D = 0
-                for scale in D_fake_det:
-                    loss_D += F.relu(1 + scale[-1]).mean()
+    #             loss_D = 0
+    #             for scale in D_fake_det:
+    #                 loss_D += F.relu(1 + scale[-1]).mean()
 
-                for scale in D_real:
-                    loss_D += F.relu(1 - scale[-1]).mean()
+    #             for scale in D_real:
+    #                 loss_D += F.relu(1 - scale[-1]).mean()
 
-                # new
-                D_fake_det1 = netD_helper(x_pred_t1.cuda(args.gpu_id).detach())
-                D_real1 = netD_helper(x_t[1].cuda(args.gpu_id))
+    #             # new
+    #             D_fake_det1 = netD_helper(x_pred_t1.cuda(args.gpu_id).detach())
+    #             D_real1 = netD_helper(x_t[1].cuda(args.gpu_id))
 
-                # loss_D = 0
-                for scale in D_fake_det1:
-                    loss_D += F.relu(1 + scale[-1]).mean()
+    #             # loss_D = 0
+    #             for scale in D_fake_det1:
+    #                 loss_D += F.relu(1 + scale[-1]).mean()
 
-                for scale in D_real1:
-                    loss_D += F.relu(1 - scale[-1]).mean()
+    #             for scale in D_real1:
+    #                 loss_D += F.relu(1 - scale[-1]).mean()
 
-                netD.zero_grad()
-                netD_helper.zero_grad()
-                loss_D.backward()
-                optD.step()
-                # optD_helper.step()
+    #             netD.zero_grad()
+    #             netD_helper.zero_grad()
+    #             loss_D.backward()
+    #             optD.step()
+    #             # optD_helper.step()
 
-                step_d += 1
-                if step_d >= 2000:
-                    break
+    #             step_d += 1
+    #             if step_d >= 2000:
+    #                 break
                     
 
     #############################################
