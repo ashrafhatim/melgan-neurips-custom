@@ -275,9 +275,9 @@ def main():
 
 
             s_t = fft(x_t[0]).detach()
-            s_t1 = fft(x_t[1]).detach()
-
             x_pred_t = netG(s_t.cuda(args.gpu_id))
+
+            s_t1 = fft(x_t[1]).detach()
             x_pred_t1 = netG(s_t1.cuda(args.gpu_id))
 
             # sample 512 window
