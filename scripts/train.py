@@ -21,6 +21,7 @@ import argparse
 from pathlib import Path
 
 import os
+import random
 
 
 def parse_args():
@@ -41,7 +42,7 @@ def parse_args():
 
     parser.add_argument("--data_path", default=None, type=Path)
     parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--seq_len", type=list, default=[8192, 1024])
+    parser.add_argument("--seq_len", type=list, default=[8192, 1024, 512])
 
     parser.add_argument("--epochs", type=int, default=5000)
     parser.add_argument("--log_interval", type=int, default=100)
@@ -278,6 +279,15 @@ def main():
 
             x_pred_t = netG(s_t.cuda(args.gpu_id))
             x_pred_t1 = netG(s_t1.cuda(args.gpu_id))
+
+            # sample 512 window
+            max_audio_start = args.seq_len[1] - args.seq_len[2]
+            audio_start = random.randint(0, max_audio_start)
+            
+            x_pred_t1 = x_pred_t1[:,:,audio_start : audio_start + args.seq_len[2]]
+            x_t[1] = x_t[1][:,:,audio_start : audio_start + args.seq_len[2]]
+            s_t1 = fft(x_t[1]).detach()
+
 
             with torch.no_grad():
                 s_pred_t = fft(x_pred_t.detach())
