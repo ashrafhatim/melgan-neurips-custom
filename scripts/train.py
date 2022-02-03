@@ -42,7 +42,7 @@ def parse_args():
 
     parser.add_argument("--data_path", default=None, type=Path)
     parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--seq_len", type=list, default=[8192, 1024, 512])
+    parser.add_argument("--seq_len", type=list, default=[8192, 512])
 
     parser.add_argument("--epochs", type=int, default=5000)
     parser.add_argument("--log_interval", type=int, default=100)
@@ -267,31 +267,43 @@ def main():
         for iterno, x_t in enumerate(train_loader):
             x_t = [ele.cuda(args.gpu_id) for ele in x_t]
 
-            # rearrange the effective batch
-            if x_t[1].shape[1] == 2:
-                t0 = x_t[1][:,0:1,:]
-                t1 = x_t[1][:,1:2,:]
-                x_t[1] = torch.concat((t0,t1), axis=0)
+            # # rearrange the effective batch
+            # if x_t[1].shape[1] == 2:
+            #     t0 = x_t[1][:,0:1,:]
+            #     t1 = x_t[1][:,1:2,:]
+            #     x_t[1] = torch.concat((t0,t1), axis=0)
 
 
             s_t = fft(x_t[0]).detach()
             x_pred_t = netG(s_t.cuda(args.gpu_id))
 
-            s_t1 = fft(x_t[1]).detach()
-            x_pred_t1 = netG(s_t1.cuda(args.gpu_id))
+            
 
             # sample 512 window
-            max_audio_start = args.seq_len[1] - args.seq_len[2]
+            max_audio_start = args.seq_len[0] - args.seq_len[1]
+
             audio_start = random.randint(0, max_audio_start)
+            x_pred_u = x_pred_t[:,:,audio_start : audio_start + args.seq_len[1]]
+            x_u = x_t[0][:,:,audio_start : audio_start + args.seq_len[1]]
+
+            audio_start = random.randint(0, max_audio_start)
+            x_pred_d = x_pred_t[:,:,audio_start : audio_start + args.seq_len[1]]
             
-            x_pred_t1 = x_pred_t1[:,:,audio_start : audio_start + args.seq_len[2]]
-            x_t[1] = x_t[1][:,:,audio_start : audio_start + args.seq_len[2]]
-            s_t1 = fft(x_t[1]).detach()
+
+            x_pred_t1 = torch.concat((x_pred_u,x_pred_d), axis=0)
+            x_t[1] = torch.concat((x_u,x_t[1]), axis=0)
+
+            
+            # s_t1 = fft(x_t[1]).detach()
+
+
+            s_t1 = fft(x_u).detach()
+            # x_pred_t1 = netG(s_t1.cuda(args.gpu_id))
 
 
             with torch.no_grad():
                 s_pred_t = fft(x_pred_t.detach())
-                s_pred_t1 = fft(x_pred_t1.detach())
+                s_pred_t1 = fft(x_pred_u.detach())
                 s_error = F.l1_loss(s_t, s_pred_t).item()
                 s_error += F.l1_loss(s_t1, s_pred_t1).item()
 
@@ -330,7 +342,8 @@ def main():
             # Train Generator #
             ###################
             D_fake = netD(x_pred_t.cuda(args.gpu_id))
-            D_fake1 = netD_helper(x_pred_t1.cuda(args.gpu_id))
+            D_fake1 = netD_helper(x_pred_u.cuda(args.gpu_id))
+            D_real1 = netD_helper(x_u.cuda(args.gpu_id))
 
             loss_G = 0
             for scale in D_fake:

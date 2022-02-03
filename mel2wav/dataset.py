@@ -39,9 +39,11 @@ class AudioDataset(torch.utils.data.Dataset):
             self.audio_files_english = files_to_list(training_files_english)
             self.audio_files_english = [Path(training_files_english).parent / x for x in self.audio_files_english]
             random.shuffle(self.audio_files_english)
+            self.num_english_files = len(self.audio_files_english)
 
         self.augment = augment
         self.transform=transform
+        
 
     def __getitem__(self, index):
         # Read audio
@@ -76,23 +78,25 @@ class AudioDataset(torch.utils.data.Dataset):
         # helper disc
         if len(self.segment_length) > 1:
 
-            options = ["arabic", "english"]
-            lang = random.choices(options, weights=[1,1], k=1)[0]
+            # options = ["arabic", "english"]
+            # lang = random.choices(options, weights=[1,1], k=1)[0]
 
-            if lang=="english":
-                index = random.choice(list(range(len(self.audio_files_english))))
-                filename = self.audio_files_english[index]
-                audio, sampling_rate = self.load_wav_to_torch(filename)
+            # if lang=="english":
+
+            index = random.randint(0, self.num_english_files-1)
+            filename = self.audio_files_english[index]
+            audio, sampling_rate = self.load_wav_to_torch(filename)
                 
             if audio.size(0) >= self.segment_length[1]:
                 max_audio_start = audio.size(0) - self.segment_length[1]
                 audio_start = random.randint(0, max_audio_start)
-                segment1 = audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0)
+                # segment1 = audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0)
 
-                audio_start = random.randint(0, max_audio_start)
-                segment2 = audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0)
+                # audio_start = random.randint(0, max_audio_start)
+                # segment2 = audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0)
 
-                out.append( torch.concat((segment1,segment2), axis=0) )
+                # out.append( torch.concat((segment1,segment2), axis=0) )
+                out.append( audio[audio_start : audio_start + self.segment_length[1]].unsqueeze(0))
             else:
                 out.append( F.pad(
                     audio, (0, self.segment_length[1] - audio.size(0)), "constant"
